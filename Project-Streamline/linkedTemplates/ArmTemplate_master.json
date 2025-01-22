@@ -1,0 +1,98 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "Project-Streamline"
+		},
+		"SnowflakeKRS_UK_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'SnowflakeKRS_UK'"
+		},
+		"SF_SNW_STRMLN_KRSUK_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'SF_SNW_STRMLN_KRSUK'"
+		},
+		"Salesforce_sandbox_clientSecret": {
+			"type": "secureString",
+			"metadata": "Secure string for 'clientSecret' of 'Salesforce_sandbox'"
+		},
+		"SnowflakeKRS_UK_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "D_STRM_DB"
+		},
+		"SnowflakeKRS_UK_properties_typeProperties_role": {
+			"type": "string",
+			"defaultValue": "SYSADMIN"
+		},
+		"SnowflakeKRS_UK_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "keyruspartner.eu-west-1.snowflakecomputing.com"
+		},
+		"Salesforce_sandbox_properties_typeProperties_environmentUrl": {
+			"type": "string",
+			"defaultValue": "https://keyrus--preprod.sandbox.my.salesforce.com"
+		},
+		"Salesforce_sandbox_properties_typeProperties_clientId": {
+			"type": "string",
+			"defaultValue": "3MVG9f4Sg6xGHZYqZiMZ19iWWp9PQL_D6F2eqkog17h4u7Y5nx58Dap6uOXVPiqBFkB46W4bqX.WRLn1QZVT0"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "Project-Streamline_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"SnowflakeKRS_UK_password": {
+						"value": "[parameters('SnowflakeKRS_UK_password')]"
+					},
+					"SF_SNW_STRMLN_KRSUK_connectionString": {
+						"value": "[parameters('SF_SNW_STRMLN_KRSUK_connectionString')]"
+					},
+					"Salesforce_sandbox_clientSecret": {
+						"value": "[parameters('Salesforce_sandbox_clientSecret')]"
+					},
+					"SnowflakeKRS_UK_properties_typeProperties_database": {
+						"value": "[parameters('SnowflakeKRS_UK_properties_typeProperties_database')]"
+					},
+					"SnowflakeKRS_UK_properties_typeProperties_role": {
+						"value": "[parameters('SnowflakeKRS_UK_properties_typeProperties_role')]"
+					},
+					"SnowflakeKRS_UK_properties_typeProperties_host": {
+						"value": "[parameters('SnowflakeKRS_UK_properties_typeProperties_host')]"
+					},
+					"Salesforce_sandbox_properties_typeProperties_environmentUrl": {
+						"value": "[parameters('Salesforce_sandbox_properties_typeProperties_environmentUrl')]"
+					},
+					"Salesforce_sandbox_properties_typeProperties_clientId": {
+						"value": "[parameters('Salesforce_sandbox_properties_typeProperties_clientId')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
