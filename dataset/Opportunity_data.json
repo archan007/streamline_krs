@@ -1,0 +1,23 @@
+{
+	"name": "Opportunity_data",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SF_SNW_STRMLN_KRSUK",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "sf_data",
+				"container": "strmlnekrsuk"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
