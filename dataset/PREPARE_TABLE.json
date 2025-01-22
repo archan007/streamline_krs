@@ -1,0 +1,463 @@
+{
+	"name": "PREPARE_TABLE",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SnowflakeKRS_UK",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"TableName": {
+				"type": "string"
+			},
+			"SchemaName": {
+				"type": "string"
+			},
+			"DatabaseName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Data Tools Pro 1 Click Data Migration Sets"
+		},
+		"annotations": [],
+		"type": "SnowflakeV2Table",
+		"schema": [
+			{
+				"name": "Id",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "IsDeleted",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "MasterRecordId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Name",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Title",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Company",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Address",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Phone",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Email",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Website",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "PhotoUrl",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Description",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "LeadSource",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Status",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Industry",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Rating",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "AnnualRevenue",
+				"type": "FLOAT",
+				"precision": 38,
+				"scale": 0
+			},
+			{
+				"name": "NumberOfEmployees",
+				"type": "NUMBER",
+				"precision": 38,
+				"scale": 0
+			},
+			{
+				"name": "OwnerId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "IsConverted",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "ConvertedDate",
+				"type": "DATE"
+			},
+			{
+				"name": "ConvertedAccountId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "ConvertedContactId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "ConvertedOpportunityId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "IsUnreadByOwner",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "CreatedDate",
+				"type": "TIMESTAMP_NTZ"
+			},
+			{
+				"name": "CreatedById",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "LastModifiedDate",
+				"type": "TIMESTAMP_NTZ"
+			},
+			{
+				"name": "LastModifiedById",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "SystemModstamp",
+				"type": "TIMESTAMP_NTZ"
+			},
+			{
+				"name": "LastActivityDate",
+				"type": "DATE"
+			},
+			{
+				"name": "CampaignId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "LastViewedDate",
+				"type": "TIMESTAMP_NTZ"
+			},
+			{
+				"name": "LastReferencedDate",
+				"type": "TIMESTAMP_NTZ"
+			},
+			{
+				"name": "UserRecordAccessId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Jigsaw",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "JigsawContactId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "EmailBouncedReason",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "EmailBouncedDate",
+				"type": "TIMESTAMP_NTZ"
+			},
+			{
+				"name": "IndividualId",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "SFSSDupeCatcher__Override_DupeCatcher__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "User_IP__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Product_of_Interest__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "sfLma__Subscriber_Org_Type__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Product_Metric_Glossary__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Data_Dictionary__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Entity_Diagram__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Data_Governance__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Data_Migration__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Report_Management__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Machine_Learning_AI__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Marketing_Segmentation__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Data_Cloud_Strategy__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Product_Uknown_Product_Needs__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Disqualify_Reason__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Activated__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Onboarded__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Invited_User__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Social_Proof__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Social_Influencer__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Authenticated__c",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "Form_Entry_Id__c",
+				"type": "FLOAT",
+				"precision": 38,
+				"scale": 0
+			},
+			{
+				"name": "Form_Name__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handlID__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "traffic_source__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "organic_source__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "organic_source_str__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handl_original_ref__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handl_landing_page__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handl_url_base__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handl_ref__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handl_url__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handl_original_ref_domain__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "handl_ip__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "user_agent__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "gaclientid__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "username__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "utm_medium__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "utm_content__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "utm_term__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "utm_campaign__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "first_utm_source__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "first_utm_campaign__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "first_utm_medium__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "first_utm_content__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "first_utm_term__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "fbclid__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "gclid__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "mscklid__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Form_URL__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Assessment_URL__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Data_Tools_Passcode__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Legacy_System_Id__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Primary_Persona__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Activation_Journey_Status__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Original_Ref_Source__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Original_Ref_URL__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Test_Formula__c",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Country",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "State",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "Street",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "PostalCode",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "FirstName",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "LastName",
+				"type": "VARCHAR"
+			},
+			{
+				"name": "StateCode",
+				"type": "VARCHAR"
+			}
+		],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().SchemaName",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().TableName",
+				"type": "Expression"
+			}
+		}
+	}
+}

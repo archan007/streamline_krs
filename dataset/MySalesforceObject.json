@@ -1,0 +1,26 @@
+{
+	"name": "MySalesforceObject",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Salesforce_sandbox",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"APIName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Data Tools Pro 1 Click Data Migration Sets"
+		},
+		"annotations": [],
+		"type": "SalesforceV2Object",
+		"schema": [],
+		"typeProperties": {
+			"objectApiName": {
+				"value": "@{dataset().APIName}",
+				"type": "Expression"
+			}
+		}
+	}
+}

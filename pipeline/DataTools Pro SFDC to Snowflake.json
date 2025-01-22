@@ -1,0 +1,269 @@
+{
+	"name": "DataTools Pro SFDC to Snowflake",
+	"properties": {
+		"description": "This template is designed to stage data from Salesforce to Snowflake.",
+		"activities": [
+			{
+				"name": "GenerateSFDCTable_v2",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Check Install Status Success",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "GenerateSFDCTable_v2",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"SINKOBJECTS": {
+							"value": "@pipeline().parameters.SinkSalesforceObjects",
+							"type": "Expression"
+						},
+						"DATABASENAME": {
+							"value": "@pipeline().parameters.DatabaseName",
+							"type": "Expression"
+						},
+						"SCHEMANAME": {
+							"value": "@pipeline().parameters.SchemaName",
+							"type": "Expression"
+						},
+						"VERSION": {
+							"value": "@pipeline().parameters.VersionNumber",
+							"type": "Expression"
+						},
+						"UPDATE_TABLE": {
+							"value": "@pipeline().parameters.AppendFields",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "LoadSFDCData_v2",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GenerateSFDCTable_v2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "LoadSFDCData_v2",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"SINKOBJECTS": {
+							"value": "@pipeline().parameters.SinkSalesforceObjects",
+							"type": "Expression"
+						},
+						"DATABASENAME": {
+							"value": "@pipeline().parameters.DatabaseName",
+							"type": "Expression"
+						},
+						"SCHEMANAME": {
+							"value": "@pipeline().parameters.SchemaName",
+							"type": "Expression"
+						},
+						"SNOWERRORHANDLING": {
+							"value": "@pipeline().parameters.SnowErrorHandling",
+							"type": "Expression"
+						},
+						"RECORDLIMIT": {
+							"value": "@pipeline().parameters.RecordLimit",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Check Install Status Success",
+				"description": "Evaluates that the install of stored procedures is successful.",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check_Install_Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(first(activity('Check_Install_Exists').output.resultSets).rows[0].TABLE_EXISTS, '1')\n",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "EnvironmentConfigScripts_v2",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "EnvironmentConfigScripts_v2",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"DATABASENAME": {
+										"value": "@pipeline().parameters.DatabaseName",
+										"type": "Expression"
+									},
+									"SCHEMANAME": {
+										"value": "@pipeline().parameters.SchemaName",
+										"type": "Expression"
+									},
+									"CREATENEWSCHEMA": {
+										"value": "@pipeline().parameters.CreateNewSchema",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Install_Result_Completed",
+							"description": "",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "EnvironmentConfigScripts_v2",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "CheckInstallSuccess",
+								"value": "Success: Environment Configured"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Install_Result_Exists",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "CheckInstallSuccess",
+								"value": "SKIPPED: Environment previously configured"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Check_Install_Exists",
+				"description": "Checks to see if the metadata table has been previously installed. Indicates that the environment has been configured.",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "SnowflakeKRS_UK",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat(\n  'SELECT COUNT(*) AS TABLE_EXISTS FROM ',pipeline().parameters.DatabaseName,'.INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ''',pipeline().parameters.SchemaName,''' AND TABLE_NAME = ''', 'SFDC_METADATA_STAGE','''')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"SinkSalesforceObjects": {
+				"type": "string",
+				"defaultValue": "Lead,Account,Opportunity,Contact,Task, Vendor__c"
+			},
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "YourDatabase"
+			},
+			"SchemaName": {
+				"type": "string",
+				"defaultValue": "YourSchema"
+			},
+			"ConfigureEnvironment": {
+				"type": "string",
+				"defaultValue": "yes"
+			},
+			"CreateNewSchema": {
+				"type": "string",
+				"defaultValue": "yes"
+			},
+			"AppendFields": {
+				"type": "string",
+				"defaultValue": "yes"
+			},
+			"ReBuildTables": {
+				"type": "string",
+				"defaultValue": "no"
+			},
+			"SnowErrorHandling": {
+				"type": "string",
+				"defaultValue": "CONTINUE"
+			},
+			"RecordLimit": {
+				"type": "string",
+				"defaultValue": "LIMIT 10000000"
+			},
+			"VersionNumber": {
+				"type": "string",
+				"defaultValue": "1.0.1"
+			}
+		},
+		"variables": {
+			"CheckInstallSuccess": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DataTools Pro 1 Click Data Lake V2.0.1"
+		},
+		"annotations": []
+	}
+}

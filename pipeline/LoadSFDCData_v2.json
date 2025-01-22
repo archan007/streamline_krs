@@ -1,0 +1,359 @@
+{
+	"name": "LoadSFDCData_v2",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Create Sink Table Set Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('ObjectsArray')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Set ObjectName",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ObjectName",
+								"value": {
+									"value": "@item()",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Run_ADFmappingFromSFDCMetaData",
+							"description": "Runs a stored procedure in Snowflake that obtains a DDL for a given Salesforce metadata. Concat from: CALL GG_DEVELOPMENT_OPPS.MIGRATION_STAGE.DDLFromMetaData('Opportunity', 'Name2');",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Set ObjectName",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SnowflakeV2Source",
+									"query": {
+										"value": "@concat(\n'CALL ',\nvariables('DatabaseName'),\n'.',variables('SchemaName'),'.',\n'ADFmappingFromSFDCMetaData(',\n'''',\nvariables('ObjectName'),\n'''',\n', ',\n'''',\n'Name2',\n'''',\n');'\n\n)",
+										"type": "Expression"
+									},
+									"exportSettings": {
+										"type": "SnowflakeExportCopyCommand"
+									}
+								},
+								"dataset": {
+									"referenceName": "PREPARE_TABLE",
+									"type": "DatasetReference",
+									"parameters": {
+										"TableName": {
+											"value": "@variables('DatabaseName')",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@variables('SchemaName')",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@variables('DatabaseName')",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						},
+						{
+							"name": "Set ADFMetaScript Variable",
+							"description": "Pulls SFDC meta data and formats into ADF metadata used for mapping. This ensures the data coming out of Salesforce can be mapped to Snowflake dynamically.",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Run_ADFmappingFromSFDCMetaData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ADFMetaScript",
+								"value": {
+									"value": "@json(string(activity('Run_ADFmappingFromSFDCMetaData').output.firstRow)).ADFMAPPINGFROMSFDCMETADATA",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Move Data from SFDC to SNOW",
+							"description": "Last step pulls data out of Salesforce, uses the ADFMetaScript to map Salesforce to final Snowflake Table.\n\nBecause meta data is pulled live the 2 systems are always in sync.",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Set ADFMetaScript Variable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SalesforceV2Source",
+									"includeDeletedObjects": false
+								},
+								"sink": {
+									"type": "SnowflakeV2Sink",
+									"preCopyScript": {
+										"value": "@{concat('TRUNCATE TABLE ' ,pipeline().parameters.DATABASENAME,'.',pipeline().parameters.SCHEMANAME,'.',item())}",
+										"type": "Expression"
+									},
+									"importSettings": {
+										"type": "SnowflakeImportCopyCommand",
+										"additionalCopyOptions": {
+											"ON_ERROR": "ABORT_STATEMENT"
+										}
+									}
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "SF_SNW_STRMLN_KRSUK",
+										"type": "LinkedServiceReference"
+									},
+									"path": "adf-stage/stage"
+								},
+								"enableSkipIncompatibleRow": true,
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Warning",
+										"enableReliableLogging": false
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "SF_SNW_STRMLN_KRSUK",
+											"type": "LinkedServiceReference"
+										},
+										"path": "adf-stage/errors"
+									}
+								},
+								"translator": {
+									"value": "@variables('ADFMetaScript')",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "MySalesforceObject",
+									"type": "DatasetReference",
+									"parameters": {
+										"APIName": {
+											"value": "@concat(variables('ObjectName'))",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "PREPARE_TABLE",
+									"type": "DatasetReference",
+									"parameters": {
+										"TableName": {
+											"value": "@toUpper(variables('ObjectName'))",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@variables('SchemaName')",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@variables('DatabaseName')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Set DatabaseName Variable",
+				"description": "",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DatabaseName",
+					"value": {
+						"value": "@pipeline().parameters.DATABASENAME",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set SchemaName",
+				"description": "",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set DatabaseName Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "SchemaName",
+					"value": {
+						"value": "@pipeline().parameters.SCHEMANAME",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set RecordLimit Variable",
+				"description": "",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set SchemaName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "RecordLimit",
+					"value": {
+						"value": "@pipeline().parameters.RECORDLIMIT",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Create Sink Table Set Variable",
+				"description": "Pulled from SINKOBJECTS parameter",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set RecordLimit Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ObjectsArray",
+					"value": {
+						"value": "@split(pipeline().parameters.SINKOBJECTS,',')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"SINKOBJECTS": {
+				"type": "string"
+			},
+			"DATABASENAME": {
+				"type": "string"
+			},
+			"SCHEMANAME": {
+				"type": "string"
+			},
+			"SNOWERRORHANDLING": {
+				"type": "object"
+			},
+			"RECORDLIMIT": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ObjectName": {
+				"type": "String"
+			},
+			"DatabaseName": {
+				"type": "String"
+			},
+			"DDLScript": {
+				"type": "String"
+			},
+			"ObjectsArray": {
+				"type": "Array"
+			},
+			"ADFMetaScript": {
+				"type": "String"
+			},
+			"SchemaName": {
+				"type": "String",
+				"defaultValue": "MIGRATION_STAGE"
+			},
+			"RecordLimit": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DataTools Pro 1 Click Data Lake V2.0.1"
+		},
+		"annotations": []
+	}
+}

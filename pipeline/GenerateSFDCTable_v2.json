@@ -1,0 +1,696 @@
+{
+	"name": "GenerateSFDCTable_v2",
+	"properties": {
+		"activities": [
+			{
+				"name": "New Object Creation Function",
+				"description": "This \"for each\" object will process each object in your list, look for new object and add metadata and table",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Create Sink Table Set Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('ObjectsArray')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Set ObjectName",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ObjectName",
+								"value": {
+									"value": "@item()",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Check_Table_Exists",
+							"description": "Evaluates snowflake tables to see if this object exists",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Set ObjectName",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "SnowflakeKRS_UK",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "@concat(\n  'SELECT COUNT(*) AS TABLE_EXISTS FROM ',pipeline().parameters.DATABASENAME,'.INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ''',pipeline().parameters.SCHEMANAME,''' AND TABLE_NAME = ''', variables('ObjectName'),'''')",
+											"type": "Expression"
+										}
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "CheckObjectNew",
+							"description": "Evaluates if the object lookup in snowflake is NULL. If condition is true functions to create DDL and add table run.",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Check_Table_Exists",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(first(activity('Check_Table_Exists').output.resultSets).rows[0].TABLE_EXISTS, '1')\n",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Purge Temp Object Metadata",
+										"description": "Purges the Salesforce object meta data so new meta data values can be updated",
+										"type": "Script",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "SnowflakeKRS_UK",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "Query",
+													"text": {
+														"value": "@concat('delete from ',pipeline().parameters.DATABASENAME,'.',pipeline().parameters.SCHEMANAME,'.SFDC_METADATA_STAGE_TEMP where ObjectName = ','''',variables('ObjectName'),'''')",
+														"type": "Expression"
+													}
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "EXECUTE DDL",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Get DDL Query",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "SnowflakeKRS_UK",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "NonQuery",
+													"text": {
+														"value": "@replace(replace(variables('DDLScript'), '\\\\\"', '\"'), '\\\\n', '\\u0010')\n",
+														"type": "Expression"
+													}
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Run_DDLFromMetaData",
+										"description": "Runs a stored procedure in Snowflake that obtains a DDL for a given Salesforce metadata. Concat from: CALL TABLE.SCHEMA.DDLFromMetaData('Opportunity', 'Name2');",
+										"type": "Lookup",
+										"dependsOn": [
+											{
+												"activity": "Call_DDLFROMMETADATA",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SnowflakeV2Source",
+												"query": {
+													"value": "@concat(\n'CALL ',\nvariables('DatabaseName'),\n'.',variables('SchemaName'),'.',\n'DDLFromMetaData(',\n'''',\nvariables('ObjectName'),\n'''',\n', ',\n'''',\n'Name2',\n'''',\n', ',\n'''',\n'Salesforce',\n'''',\n');'\n\n)",
+													"type": "Expression"
+												},
+												"exportSettings": {
+													"type": "SnowflakeExportCopyCommand"
+												}
+											},
+											"dataset": {
+												"referenceName": "PREPARE_TABLE",
+												"type": "DatasetReference",
+												"parameters": {
+													"TableName": {
+														"value": "@variables('ObjectName')",
+														"type": "Expression"
+													},
+													"SchemaName": {
+														"value": "@pipeline().parameters.SCHEMANAME",
+														"type": "Expression"
+													},
+													"DatabaseName": {
+														"value": "@pipeline().parameters.DATABASENAME",
+														"type": "Expression"
+													}
+												}
+											}
+										}
+									},
+									{
+										"name": "Get DDL Query",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Run_DDLFromMetaData",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "DDLScript",
+											"value": {
+												"value": "@json(string(activity('Run_DDLFromMetaData').output.firstRow)).DDLFROMMETADATA\n",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "CREATE_TABLE_RESULT-SUCCESS",
+										"description": "Table Created",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "EXECUTE DDL",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "CREATE_TABLE_RESULT",
+											"value": "Success-Table Created"
+										}
+									},
+									{
+										"name": "CREATE_TABLE_RESULT- ERROR",
+										"description": "Error Creating Table",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "EXECUTE DDL",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "CREATE_TABLE_RESULT",
+											"value": "Error-Table Not Created"
+										}
+									},
+									{
+										"name": "Get SFDC Objet Fields and Type_copy1_copy1",
+										"description": "Pulls all fields, types, and object relationships and posts to Snowflake table called SFDC_METADATA_STAGE. Truncates before inserting to ensure we always have freshest metadata from Salesforce",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "Purge Temp Object Metadata",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "SalesforceV2Source",
+												"additionalColumns": [
+													{
+														"name": "ObjectName",
+														"value": {
+															"value": "@variables('ObjectName')",
+															"type": "Expression"
+														}
+													}
+												],
+												"SOQLQuery": {
+													"value": "@concat('SELECT DurableId, EntityDefinitionId, FieldDefinitionId, DataType, DeveloperName, Label, Length, Precision, Scale,RelationshipName,QualifiedApiName,ValueTypeId\nFROM EntityParticle WHERE EntityDefinition.QualifiedApiName =','''',variables('ObjectName'),'''')\n",
+													"type": "Expression"
+												},
+												"includeDeletedObjects": false
+											},
+											"sink": {
+												"type": "SnowflakeV2Sink",
+												"importSettings": {
+													"type": "SnowflakeImportCopyCommand"
+												}
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "SF_SNW_STRMLN_KRSUK",
+													"type": "LinkedServiceReference"
+												},
+												"path": "adf-stage/stage"
+											},
+											"translator": {
+												"type": "TabularTranslator",
+												"mappings": [
+													{
+														"source": {
+															"name": "ObjectName",
+															"type": "String"
+														},
+														"sink": {
+															"name": "OBJECTNAME",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "QualifiedApiName",
+															"type": "String"
+														},
+														"sink": {
+															"name": "QUALIFIEDAPINAME",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "DataType",
+															"type": "String"
+														},
+														"sink": {
+															"name": "DATATYPE",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "DeveloperName",
+															"type": "String"
+														},
+														"sink": {
+															"name": "DEVELOPERNAME",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "RelationshipName",
+															"type": "String"
+														},
+														"sink": {
+															"name": "RELATIONSHIPNAME",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "ValueTypeId",
+															"type": "String"
+														},
+														"sink": {
+															"name": "VALUETYPEID",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Precision",
+															"type": "Int32"
+														},
+														"sink": {
+															"name": "PRECISION",
+															"type": "Int64"
+														}
+													},
+													{
+														"source": {
+															"name": "Label",
+															"type": "String"
+														},
+														"sink": {
+															"name": "LABEL",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "DurableId",
+															"type": "String"
+														},
+														"sink": {
+															"name": "ID",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Length",
+															"type": "Int32"
+														},
+														"sink": {
+															"name": "LENGTH",
+															"type": "Int64"
+														}
+													}
+												]
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "MySalesforceObject",
+												"type": "DatasetReference",
+												"parameters": {
+													"APIName": {
+														"value": "@concat(variables('ObjectName'))",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "PREPARE_TABLE",
+												"type": "DatasetReference",
+												"parameters": {
+													"TableName": "SFDC_METADATA_STAGE_TEMP",
+													"SchemaName": {
+														"value": "@pipeline().parameters.SCHEMANAME",
+														"type": "Expression"
+													},
+													"DatabaseName": {
+														"value": "@pipeline().parameters.DATABASENAME",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "Call_DDLFROMMETADATA",
+										"description": "",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "UPSERT NEW FIELDS",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "CALL_DDLFROMMETADATA",
+											"value": {
+												"value": "@concat(\n'CALL ',\npipeline().parameters.DATABASENAME,\n'.',pipeline().parameters.SCHEMANAME,'.',\n'DDLFromMetaData(',\n'''',\nvariables('ObjectName'),\n'''',\n', ',\n'''',\n'Type',\n'''',\n', ',\n'''',\n'Salesforce',\n'''',\n');'\n\n)",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "UPSERT NEW FIELDS",
+										"description": "Upsert new fields from SFDC_METADATA_STAGE_TEMP into SFDC_METADATA_STAGE",
+										"type": "Script",
+										"dependsOn": [
+											{
+												"activity": "Set UPSERTMETADATA_STAGE variable",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"linkedServiceName": {
+											"referenceName": "SnowflakeKRS_UK",
+											"type": "LinkedServiceReference"
+										},
+										"typeProperties": {
+											"scripts": [
+												{
+													"type": "NonQuery",
+													"text": {
+														"value": "@variables('UPSERT_METADATA_STAGE')",
+														"type": "Expression"
+													}
+												}
+											],
+											"scriptBlockExecutionTimeout": "02:00:00"
+										}
+									},
+									{
+										"name": "Set UPSERTMETADATA_STAGE variable",
+										"description": "Concatenates an \"Upsert\" script that, allows you to re-use this pipeline to upsert new fields into your DB. Please review documentation for impact.",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Get SFDC Objet Fields and Type_copy1_copy1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "UPSERT_METADATA_STAGE",
+											"value": {
+												"value": "@concat('MERGE INTO ',variables('DatabaseName'),\n'.',variables('SchemaName'),'.','SFDC_METADATA_STAGE AS target USING (SELECT * FROM ', variables('DatabaseName'),'.',variables('SchemaName'),'.','SFDC_METADATA_STAGE_TEMP WHERE ''','yes',''' = ''yes'') AS source ON target.ID = source.ID WHEN MATCHED THEN UPDATE SET target.OBJECTNAME=source.OBJECTNAME,target.QUALIFIEDAPINAME=source.QUALIFIEDAPINAME,target.DATATYPE=source.DATATYPE,target.DEVELOPERNAME=source.DEVELOPERNAME,target.RELATIONSHIPNAME=source.RELATIONSHIPNAME,target.VALUETYPEID=source.VALUETYPEID,target.PRECISION=source.PRECISION,target.LABEL=source.LABEL,target.ID=source.ID,target.LENGTH=source.LENGTH WHEN NOT MATCHED THEN INSERT (OBJECTNAME,QUALIFIEDAPINAME,DATATYPE,DEVELOPERNAME,RELATIONSHIPNAME,VALUETYPEID,PRECISION,LABEL,ID,LENGTH) VALUES (source.OBJECTNAME,source.QUALIFIEDAPINAME,source.DATATYPE,source.DEVELOPERNAME,source.RELATIONSHIPNAME,source.VALUETYPEID,source.PRECISION,source.LABEL,source.ID,source.LENGTH);' )",
+												"type": "Expression"
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "CREATE_TABLE_RESULT",
+										"description": "Table already exists",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "CREATE_TABLE_RESULT",
+											"value": "Table already exists"
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Create Sink Table Set Variable",
+				"description": "Pulled from SINKOBJECTS parameter",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set SchemaName Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ObjectsArray",
+					"value": {
+						"value": "@split(pipeline().parameters.SINKOBJECTS,',')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set DatabaseName Variable",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DatabaseName",
+					"value": {
+						"value": "@pipeline().parameters.DATABASENAME",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set SchemaName Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set DatabaseName Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "SchemaName",
+					"value": {
+						"value": "@pipeline().parameters.SCHEMANAME",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"SINKOBJECTS": {
+				"type": "string"
+			},
+			"DATABASENAME": {
+				"type": "string"
+			},
+			"SCHEMANAME": {
+				"type": "string"
+			},
+			"VERSION": {
+				"type": "string"
+			},
+			"UPDATE_TABLE": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ObjectName": {
+				"type": "String"
+			},
+			"DatabaseName": {
+				"type": "String"
+			},
+			"DDLScript": {
+				"type": "String"
+			},
+			"ObjectsArray": {
+				"type": "Array"
+			},
+			"SchemaName": {
+				"type": "String"
+			},
+			"CREATE_TABLE_RESULT": {
+				"type": "String"
+			},
+			"CALL_DDLFROMMETADATA": {
+				"type": "String"
+			},
+			"UPSERT_METADATA_STAGE": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DataTools Pro 1 Click Data Lake V2.0.1"
+		},
+		"annotations": []
+	}
+}
