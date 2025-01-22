@@ -322,7 +322,7 @@
 												"type": "SnowflakeV2Sink",
 												"importSettings": {
 													"type": "SnowflakeImportCopyCommand",
-													"storageIntegration": "DQ_CHECK_STORAGE_INT"
+													"storageIntegration": "AZURE_INT_STRMLN"
 												}
 											},
 											"enableStaging": true,
