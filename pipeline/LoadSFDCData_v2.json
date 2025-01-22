@@ -158,13 +158,13 @@
 										"referenceName": "SF_SNW_STRMLN_KRSUK",
 										"type": "LinkedServiceReference"
 									},
-									"path": "adf-stage/stage"
+									"path": "strmlnekrsuk/sf_data"
 								},
 								"enableSkipIncompatibleRow": true,
 								"logSettings": {
 									"enableCopyActivityLog": true,
 									"copyActivityLogSettings": {
-										"logLevel": "Warning",
+										"logLevel": "Info",
 										"enableReliableLogging": false
 									},
 									"logLocationSettings": {
@@ -172,7 +172,7 @@
 											"referenceName": "SF_SNW_STRMLN_KRSUK",
 											"type": "LinkedServiceReference"
 										},
-										"path": "adf-stage/errors"
+										"path": "strmlnekrsuk/errors"
 									}
 								},
 								"translator": {
