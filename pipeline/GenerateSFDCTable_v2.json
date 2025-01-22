@@ -321,7 +321,8 @@
 											"sink": {
 												"type": "SnowflakeV2Sink",
 												"importSettings": {
-													"type": "SnowflakeImportCopyCommand"
+													"type": "SnowflakeImportCopyCommand",
+													"storageIntegration": "DQ_CHECK_STORAGE_INT"
 												}
 											},
 											"enableStaging": true,
