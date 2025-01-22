@@ -2323,11 +2323,11 @@
 					},
 					"DatabaseName": {
 						"type": "string",
-						"defaultValue": "YourDatabase"
+						"defaultValue": "D_STRM_DB"
 					},
 					"SchemaName": {
 						"type": "string",
-						"defaultValue": "YourSchema"
+						"defaultValue": "SF_DATA"
 					},
 					"ConfigureEnvironment": {
 						"type": "string",
@@ -2335,7 +2335,7 @@
 					},
 					"CreateNewSchema": {
 						"type": "string",
-						"defaultValue": "yes"
+						"defaultValue": "no"
 					},
 					"AppendFields": {
 						"type": "string",
