@@ -7,10 +7,6 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "Project-Streamline"
 		},
-		"SnowflakeKRS_UK_password": {
-			"type": "secureString",
-			"metadata": "Secure string for 'password' of 'SnowflakeKRS_UK'"
-		},
 		"SF_SNW_STRMLN_KRSUK_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'SF_SNW_STRMLN_KRSUK'"
@@ -18,6 +14,18 @@
 		"Salesforce_sandbox_clientSecret": {
 			"type": "secureString",
 			"metadata": "Secure string for 'clientSecret' of 'Salesforce_sandbox'"
+		},
+		"SnowflakeKRS_UK_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'SnowflakeKRS_UK'"
+		},
+		"Salesforce_sandbox_properties_typeProperties_environmentUrl": {
+			"type": "string",
+			"defaultValue": "https://keyrus--preprod.sandbox.my.salesforce.com"
+		},
+		"Salesforce_sandbox_properties_typeProperties_clientId": {
+			"type": "string",
+			"defaultValue": "3MVG9f4Sg6xGHZYqZiMZ19iWWp9PQL_D6F2eqkog17h4u7Y5nx58Dap6uOXVPiqBFkB46W4bqX.WRLn1QZVT0"
 		},
 		"SnowflakeKRS_UK_properties_typeProperties_database": {
 			"type": "string",
@@ -30,51 +38,12 @@
 		"SnowflakeKRS_UK_properties_typeProperties_host": {
 			"type": "string",
 			"defaultValue": "keyruspartner.eu-west-1.snowflakecomputing.com"
-		},
-		"Salesforce_sandbox_properties_typeProperties_environmentUrl": {
-			"type": "string",
-			"defaultValue": "https://keyrus--preprod.sandbox.my.salesforce.com"
-		},
-		"Salesforce_sandbox_properties_typeProperties_clientId": {
-			"type": "string",
-			"defaultValue": "3MVG9f4Sg6xGHZYqZiMZ19iWWp9PQL_D6F2eqkog17h4u7Y5nx58Dap6uOXVPiqBFkB46W4bqX.WRLn1QZVT0"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
-		{
-			"name": "[concat(parameters('factoryName'), '/SFDC to Snowflake')]",
-			"type": "Microsoft.DataFactory/factories/templates",
-			"apiVersion": "2018-06-01",
-			"properties": {},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/SnowflakeKRS_UK')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Keyrus UK snowflake instance",
-				"annotations": [],
-				"type": "SnowflakeV2",
-				"typeProperties": {
-					"authenticationType": "Basic",
-					"accountIdentifier": "keyruspartner.eu-west-1",
-					"user": "KEYRUS_DEVELOPER",
-					"database": "[parameters('SnowflakeKRS_UK_properties_typeProperties_database')]",
-					"warehouse": "KEYRUS_USERS_WH",
-					"role": "[parameters('SnowflakeKRS_UK_properties_typeProperties_role')]",
-					"host": "[parameters('SnowflakeKRS_UK_properties_typeProperties_host')]",
-					"password": {
-						"type": "SecureString",
-						"value": "[parameters('SnowflakeKRS_UK_password')]"
-					}
-				}
-			},
-			"dependsOn": []
-		},
 		{
 			"name": "[concat(parameters('factoryName'), '/SF_SNW_STRMLN_KRSUK')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
@@ -107,6 +76,459 @@
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SnowflakeKRS_UK')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Keyrus UK snowflake instance",
+				"annotations": [],
+				"type": "SnowflakeV2",
+				"typeProperties": {
+					"authenticationType": "Basic",
+					"accountIdentifier": "keyruspartner.eu-west-1",
+					"user": "KEYRUS_DEVELOPER",
+					"database": "[parameters('SnowflakeKRS_UK_properties_typeProperties_database')]",
+					"warehouse": "KEYRUS_USERS_WH",
+					"role": "[parameters('SnowflakeKRS_UK_properties_typeProperties_role')]",
+					"host": "[parameters('SnowflakeKRS_UK_properties_typeProperties_host')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('SnowflakeKRS_UK_password')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/EnvironmentConfigScripts_v2')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "CreateMetaDataStage",
+						"description": "Creates a table called SFDC_METADATA_STAGE in your Snowflake schema using fields stored in MetaDataTableObjects variable",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "CreateMetaDataStage_TEMP",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "SnowflakeKRS_UK",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat('create or replace TABLE ',variables('DatabaseName'),'.',variables('SchemaName'),'.SFDC_METADATA_STAGE',variables('MetaDataTableObjects'))",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Set DatabaseName",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "CreateNewSchema",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "DatabaseName",
+							"value": {
+								"value": "@pipeline().parameters.DATABASENAME",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Set SchemaName",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Set DatabaseName",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "SchemaName",
+							"value": {
+								"value": "@pipeline().parameters.SCHEMANAME",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Install DDL Stored Proc",
+						"description": "Install DDL Stored Procecure DDLFromMetaData",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Create LOG TABLE",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "SnowflakeKRS_UK",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "NonQuery",
+									"text": {
+										"value": "@concat(\n    'CREATE OR REPLACE PROCEDURE ',variables('DatabaseName'),'.',pipeline().parameters.SCHEMANAME,'.DDLFromMetaData',\n    variables('DDLFromMetaData')\n)",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Install ADF Mapping Stored Proc",
+						"description": "Install ADF Mapping Stored Procedure ADFmappingFromSFDCMetaData",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Install DDL Stored Proc",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "SnowflakeKRS_UK",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "NonQuery",
+									"text": {
+										"value": "@concat(\n    'CREATE OR REPLACE PROCEDURE ',variables('DatabaseName'),'.',variables('SchemaName'),'.ADFmappingFromSFDCMetaData',\n    variables('ADFmappingFromSFDCMetaData')\n)",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Create LOG TABLE",
+						"description": "Creates a table called LOGTABLE",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "CreateMetaDataStage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "SnowflakeKRS_UK",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat('create or replace TABLE ',variables('DatabaseName'),'.',variables('SchemaName'),'.LOGTABLE',variables('LOGTABLE'))",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Check Create Schema",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Set SchemaName",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(variables('CreateNewSchema'), 'yes')",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "CreateSchema_MetaDataStage_copy1_copy1",
+									"description": "Creates a schema called MIGRATION_STAGE in your Snowflake table ",
+									"type": "Script",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "SnowflakeKRS_UK",
+										"type": "LinkedServiceReference"
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat('create or replace SCHEMA ',variables('DatabaseName'),'.',variables('SchemaName'))",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "CreateNewSchema",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "CreateNewSchema",
+							"value": {
+								"value": "@pipeline().parameters.CREATENEWSCHEMA",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "INSERT SUCCESS LOG",
+						"description": "",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Install ADF Mapping Stored Proc",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "SnowflakeKRS_UK",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat(\n    'INSERT INTO ', variables('DatabaseName'), '.', variables('SchemaName'), '.LOGTABLE ',\n    '(\"JOBDATE\", \"RESULT_TYPE\", \"RESULT\", \"NODE\") SELECT NULL, ''INSTALL'', PARSE_JSON(''{\"result\":\"SUCCESS\",\"version\":\"', pipeline().parameters.VERSION, '\"}''), NULL;'\n)",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "CreateMetaDataStage_TEMP",
+						"description": "Creates a table called SFDC_METADATA_STAGE_TEMP in your Snowflake schema using fields stored in MetaDataTableObjects variable",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "Check Create Schema",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "SnowflakeKRS_UK",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat('create or replace TABLE ',variables('DatabaseName'),'.',variables('SchemaName'),'.SFDC_METADATA_STAGE_TEMP',variables('MetaDataTableObjects'))",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"DATABASENAME": {
+						"type": "string"
+					},
+					"SCHEMANAME": {
+						"type": "string"
+					},
+					"CREATENEWSCHEMA": {
+						"type": "string"
+					},
+					"VERSION": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"DatabaseName": {
+						"type": "String"
+					},
+					"MetaDataTableObjects": {
+						"type": "String",
+						"defaultValue": "(OBJECTNAME VARCHAR(255), QUALIFIEDAPINAME VARCHAR(255), DATATYPE VARCHAR(255), DEVELOPERNAME VARCHAR(255), RELATIONSHIPNAME VARCHAR(255), VALUETYPEID VARCHAR(255), PRECISION NUMBER(38,0), LABEL VARCHAR(255), \tID VARCHAR(255), LENGTH NUMBER(38,0),STATUS VARCHAR(255) );"
+					},
+					"SchemaName": {
+						"type": "String"
+					},
+					"DDLFromMetaData": {
+						"type": "String",
+						"defaultValue": "(OBJECTNAME VARCHAR(16777216), EXCLUDE VARCHAR(16777216), SOURCE_DB VARCHAR(16777216)) RETURNS VARCHAR(16777216) LANGUAGE JAVASCRIPT EXECUTE AS OWNER AS $$ var sourceDbNormalized = SOURCE_DB ? SOURCE_DB.toLowerCase() : null; var dataTypeMappings = { \"salesforce\": { \"id\": \"VARCHAR(255)\", \"string\": \"VARCHAR(255)\", \"boolean\": \"BOOLEAN\", \"double\": \"FLOAT\", \"integer\": \"INT\", \"datetime\": \"TIMESTAMP_NTZ\", \"date\": \"DATE\" } }; if (!dataTypeMappings[sourceDbNormalized]) { throw \"Unsupported source database: \" + SOURCE_DB; } var current_database_result = snowflake.execute({ sqlText: \"SELECT CURRENT_DATABASE()\" }); current_database_result.next(); var current_database_value = current_database_result.getColumnValue(1); var current_schema_result = snowflake.execute({ sqlText: \"SELECT CURRENT_SCHEMA()\" }); current_schema_result.next(); var current_schema_value = current_schema_result.getColumnValue(1); var metadata_table = current_database_value + \".\" + current_schema_value + \".SFDC_METADATA_STAGE\"; var sql_command = \"SELECT OBJECTNAME, QUALIFIEDAPINAME, VALUETYPEID, LENGTH FROM \" + metadata_table + \" WHERE  (UPPER(STATUS) != 'DISABLED' OR STATUS IS NULL) AND OBJECTNAME = '\" + OBJECTNAME + \"'\"; if (EXCLUDE && EXCLUDE.trim() !== '') { sql_command += \" AND QUALIFIEDAPINAME NOT IN ('\" + EXCLUDE.replace(/,/g, \"','\") + \"')\"; } var result = snowflake.execute({ sqlText: sql_command }); var column_names = []; var column_types = []; while (result.next()) { column_names.push(result.getColumnValue(\"QUALIFIEDAPINAME\")); var valuetype = result.getColumnValue(\"VALUETYPEID\"); var length = result.getColumnValue(\"LENGTH\"); if (dataTypeMappings[sourceDbNormalized][valuetype]) { var mappedType = dataTypeMappings[sourceDbNormalized][valuetype]; if (mappedType.includes(\"VARCHAR\") && length) { mappedType = \"VARCHAR(\" + length + \")\"; } column_types.push(mappedType); } else { column_types.push(\"VARCHAR(255)\"); } } if (column_names.length === 0) { throw \"No metadata found for OBJECTNAME: \" + OBJECTNAME; } var DDL = \"CREATE OR REPLACE TABLE \" + current_database_value + \".\" + current_schema_value + \".\" + OBJECTNAME + \" (\\n\"; for (var i = 0; i < column_names.length; i++) { DDL += \"  \\\"\" + column_names[i] + \"\\\" \" + column_types[i] + \",\\n\"; } DDL = DDL.slice(0, -2) + \"\\n);\"; return DDL; $$;"
+					},
+					"ADFmappingFromSFDCMetaData": {
+						"type": "String",
+						"defaultValue": "(\"OBJECTNAME\" VARCHAR(16777216), \"EXCLUDE\" VARCHAR(16777216)) RETURNS VARCHAR(16777216) LANGUAGE JAVASCRIPT EXECUTE AS OWNER AS 'var current_database_result = snowflake.execute({sqlText: \"SELECT CURRENT_DATABASE()\"});current_database_result.next();var current_database_value = current_database_result.getColumnValue(1);var current_schema_result = snowflake.execute({sqlText: \"SELECT CURRENT_SCHEMA()\"});current_schema_result.next();var current_schema_value = current_schema_result.getColumnValue(1);var metadata_table = current_database_value + \".\" + current_schema_value + \".SFDC_METADATA_STAGE\";var sql = `SELECT OBJECTNAME, QUALIFIEDAPINAME, VALUETYPEID, LENGTH FROM ` + metadata_table + ` WHERE (UPPER(STATUS) != ''DISABLED'' OR STATUS IS NULL) AND OBJECTNAME = ''` + OBJECTNAME + `'' AND QUALIFIEDAPINAME NOT IN (''` + EXCLUDE.split('','').join(\"'',''\") + `'')`;var stmt = snowflake.createStatement({sqlText: sql});var resultSet = stmt.execute();var mappings = [];function valueTypeToDataType(valueType) {switch (valueType) {case \"id\": return \"String\";case \"string\": return \"String\";case \"boolean\": return \"Boolean\";case \"double\": return \"Decimal\";case \"integer\": return \"Integer\";case \"datetime\": return \"Date/Time\";case \"date\": return \"Date/Time\";case \"address\": return \"String\";default: return \"String\";}}while (resultSet.next()) {var qualifiedApiName = resultSet.getColumnValue(2);var valueType = resultSet.getColumnValue(3);var dataType = valueTypeToDataType(valueType);var mapping = {source: {name: qualifiedApiName, type: dataType},sink: {name: qualifiedApiName, type: dataType}};mappings.push(mapping);}var output = {type: \"TabularTranslator\", mappings: mappings};return JSON.stringify(output, null, 2);';"
+					},
+					"LOGTABLE": {
+						"type": "String",
+						"defaultValue": "(JOBDATE DATETIME, RESULT_TYPE VARCHAR(255), RESULT VARIANT,NODE VARCHAR(255));"
+					},
+					"CreateNewSchema": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "DataTools Pro 1 Click Data Lake V2.0.1"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/SnowflakeKRS_UK')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MySalesforceObject')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Salesforce_sandbox",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"APIName": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Data Tools Pro 1 Click Data Migration Sets"
+				},
+				"annotations": [],
+				"type": "SalesforceV2Object",
+				"schema": [],
+				"typeProperties": {
+					"objectApiName": {
+						"value": "@{dataset().APIName}",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Salesforce_sandbox')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/PREPARE_TABLE')]",
@@ -577,442 +999,6 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/MySalesforceObject')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "Salesforce_sandbox",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"APIName": {
-						"type": "string"
-					}
-				},
-				"folder": {
-					"name": "Data Tools Pro 1 Click Data Migration Sets"
-				},
-				"annotations": [],
-				"type": "SalesforceV2Object",
-				"schema": [],
-				"typeProperties": {
-					"objectApiName": {
-						"value": "@{dataset().APIName}",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/Salesforce_sandbox')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/EnvironmentConfigScripts_v2')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "CreateMetaDataStage",
-						"description": "Creates a table called SFDC_METADATA_STAGE in your Snowflake schema using fields stored in MetaDataTableObjects variable",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "CreateMetaDataStage_TEMP",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "SnowflakeKRS_UK",
-							"type": "LinkedServiceReference",
-							"parameters": {}
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "Query",
-									"text": {
-										"value": "@concat('create or replace TABLE ',variables('DatabaseName'),'.',variables('SchemaName'),'.SFDC_METADATA_STAGE',variables('MetaDataTableObjects'))",
-										"type": "Expression"
-									}
-								}
-							],
-							"scriptBlockExecutionTimeout": "02:00:00"
-						}
-					},
-					{
-						"name": "Set DatabaseName",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "CreateNewSchema",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "DatabaseName",
-							"value": {
-								"value": "@pipeline().parameters.DATABASENAME",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Set SchemaName",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "Set DatabaseName",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "SchemaName",
-							"value": {
-								"value": "@pipeline().parameters.SCHEMANAME",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Install DDL Stored Proc",
-						"description": "Install DDL Stored Procecure DDLFromMetaData",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "Create LOG TABLE",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "SnowflakeKRS_UK",
-							"type": "LinkedServiceReference",
-							"parameters": {}
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "NonQuery",
-									"text": {
-										"value": "@concat(\n    'CREATE OR REPLACE PROCEDURE ',variables('DatabaseName'),'.',pipeline().parameters.SCHEMANAME,'.DDLFromMetaData',\n    variables('DDLFromMetaData')\n)",
-										"type": "Expression"
-									}
-								}
-							],
-							"scriptBlockExecutionTimeout": "02:00:00"
-						}
-					},
-					{
-						"name": "Install ADF Mapping Stored Proc",
-						"description": "Install ADF Mapping Stored Procedure ADFmappingFromSFDCMetaData",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "Install DDL Stored Proc",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "SnowflakeKRS_UK",
-							"type": "LinkedServiceReference",
-							"parameters": {}
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "NonQuery",
-									"text": {
-										"value": "@concat(\n    'CREATE OR REPLACE PROCEDURE ',variables('DatabaseName'),'.',variables('SchemaName'),'.ADFmappingFromSFDCMetaData',\n    variables('ADFmappingFromSFDCMetaData')\n)",
-										"type": "Expression"
-									}
-								}
-							],
-							"scriptBlockExecutionTimeout": "02:00:00"
-						}
-					},
-					{
-						"name": "Create LOG TABLE",
-						"description": "Creates a table called LOGTABLE",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "CreateMetaDataStage",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "SnowflakeKRS_UK",
-							"type": "LinkedServiceReference",
-							"parameters": {}
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "Query",
-									"text": {
-										"value": "@concat('create or replace TABLE ',variables('DatabaseName'),'.',variables('SchemaName'),'.LOGTABLE',variables('LOGTABLE'))",
-										"type": "Expression"
-									}
-								}
-							],
-							"scriptBlockExecutionTimeout": "02:00:00"
-						}
-					},
-					{
-						"name": "Check Create Schema",
-						"type": "IfCondition",
-						"dependsOn": [
-							{
-								"activity": "Set SchemaName",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"expression": {
-								"value": "@equals(variables('CreateNewSchema'), 'yes')",
-								"type": "Expression"
-							},
-							"ifTrueActivities": [
-								{
-									"name": "CreateSchema_MetaDataStage_copy1_copy1",
-									"description": "Creates a schema called MIGRATION_STAGE in your Snowflake table ",
-									"type": "Script",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "0.12:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"linkedServiceName": {
-										"referenceName": "SnowflakeKRS_UK",
-										"type": "LinkedServiceReference",
-										"parameters": {}
-									},
-									"typeProperties": {
-										"scripts": [
-											{
-												"type": "Query",
-												"text": {
-													"value": "@concat('create or replace SCHEMA ',variables('DatabaseName'),'.',variables('SchemaName'))",
-													"type": "Expression"
-												}
-											}
-										],
-										"scriptBlockExecutionTimeout": "02:00:00"
-									}
-								}
-							]
-						}
-					},
-					{
-						"name": "CreateNewSchema",
-						"type": "SetVariable",
-						"dependsOn": [],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "CreateNewSchema",
-							"value": {
-								"value": "@pipeline().parameters.CREATENEWSCHEMA",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "INSERT SUCCESS LOG",
-						"description": "",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "Install ADF Mapping Stored Proc",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "SnowflakeKRS_UK",
-							"type": "LinkedServiceReference",
-							"parameters": {}
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "Query",
-									"text": {
-										"value": "@concat(\n    'INSERT INTO ', variables('DatabaseName'), '.', variables('SchemaName'), '.LOGTABLE ',\n    '(\"JOBDATE\", \"RESULT_TYPE\", \"RESULT\", \"NODE\") SELECT NULL, ''INSTALL'', PARSE_JSON(''{\"result\":\"SUCCESS\",\"version\":\"', pipeline().parameters.VERSION, '\"}''), NULL;'\n)",
-										"type": "Expression"
-									}
-								}
-							],
-							"scriptBlockExecutionTimeout": "02:00:00"
-						}
-					},
-					{
-						"name": "CreateMetaDataStage_TEMP",
-						"description": "Creates a table called SFDC_METADATA_STAGE_TEMP in your Snowflake schema using fields stored in MetaDataTableObjects variable",
-						"type": "Script",
-						"dependsOn": [
-							{
-								"activity": "Check Create Schema",
-								"dependencyConditions": [
-									"Completed"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"linkedServiceName": {
-							"referenceName": "SnowflakeKRS_UK",
-							"type": "LinkedServiceReference",
-							"parameters": {}
-						},
-						"typeProperties": {
-							"scripts": [
-								{
-									"type": "Query",
-									"text": {
-										"value": "@concat('create or replace TABLE ',variables('DatabaseName'),'.',variables('SchemaName'),'.SFDC_METADATA_STAGE_TEMP',variables('MetaDataTableObjects'))",
-										"type": "Expression"
-									}
-								}
-							],
-							"scriptBlockExecutionTimeout": "02:00:00"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"DATABASENAME": {
-						"type": "string"
-					},
-					"SCHEMANAME": {
-						"type": "string"
-					},
-					"CREATENEWSCHEMA": {
-						"type": "string"
-					},
-					"VERSION": {
-						"type": "string"
-					}
-				},
-				"variables": {
-					"DatabaseName": {
-						"type": "String"
-					},
-					"MetaDataTableObjects": {
-						"type": "String",
-						"defaultValue": "(OBJECTNAME VARCHAR(255), QUALIFIEDAPINAME VARCHAR(255), DATATYPE VARCHAR(255), DEVELOPERNAME VARCHAR(255), RELATIONSHIPNAME VARCHAR(255), VALUETYPEID VARCHAR(255), PRECISION NUMBER(38,0), LABEL VARCHAR(255), \tID VARCHAR(255), LENGTH NUMBER(38,0),STATUS VARCHAR(255) );"
-					},
-					"SchemaName": {
-						"type": "String"
-					},
-					"DDLFromMetaData": {
-						"type": "String",
-						"defaultValue": "(OBJECTNAME VARCHAR(16777216), EXCLUDE VARCHAR(16777216), SOURCE_DB VARCHAR(16777216)) RETURNS VARCHAR(16777216) LANGUAGE JAVASCRIPT EXECUTE AS OWNER AS $$ var sourceDbNormalized = SOURCE_DB ? SOURCE_DB.toLowerCase() : null; var dataTypeMappings = { \"salesforce\": { \"id\": \"VARCHAR(255)\", \"string\": \"VARCHAR(255)\", \"boolean\": \"BOOLEAN\", \"double\": \"FLOAT\", \"integer\": \"INT\", \"datetime\": \"TIMESTAMP_NTZ\", \"date\": \"DATE\" } }; if (!dataTypeMappings[sourceDbNormalized]) { throw \"Unsupported source database: \" + SOURCE_DB; } var current_database_result = snowflake.execute({ sqlText: \"SELECT CURRENT_DATABASE()\" }); current_database_result.next(); var current_database_value = current_database_result.getColumnValue(1); var current_schema_result = snowflake.execute({ sqlText: \"SELECT CURRENT_SCHEMA()\" }); current_schema_result.next(); var current_schema_value = current_schema_result.getColumnValue(1); var metadata_table = current_database_value + \".\" + current_schema_value + \".SFDC_METADATA_STAGE\"; var sql_command = \"SELECT OBJECTNAME, QUALIFIEDAPINAME, VALUETYPEID, LENGTH FROM \" + metadata_table + \" WHERE  (UPPER(STATUS) != 'DISABLED' OR STATUS IS NULL) AND OBJECTNAME = '\" + OBJECTNAME + \"'\"; if (EXCLUDE && EXCLUDE.trim() !== '') { sql_command += \" AND QUALIFIEDAPINAME NOT IN ('\" + EXCLUDE.replace(/,/g, \"','\") + \"')\"; } var result = snowflake.execute({ sqlText: sql_command }); var column_names = []; var column_types = []; while (result.next()) { column_names.push(result.getColumnValue(\"QUALIFIEDAPINAME\")); var valuetype = result.getColumnValue(\"VALUETYPEID\"); var length = result.getColumnValue(\"LENGTH\"); if (dataTypeMappings[sourceDbNormalized][valuetype]) { var mappedType = dataTypeMappings[sourceDbNormalized][valuetype]; if (mappedType.includes(\"VARCHAR\") && length) { mappedType = \"VARCHAR(\" + length + \")\"; } column_types.push(mappedType); } else { column_types.push(\"VARCHAR(255)\"); } } if (column_names.length === 0) { throw \"No metadata found for OBJECTNAME: \" + OBJECTNAME; } var DDL = \"CREATE OR REPLACE TABLE \" + current_database_value + \".\" + current_schema_value + \".\" + OBJECTNAME + \" (\\n\"; for (var i = 0; i < column_names.length; i++) { DDL += \"  \\\"\" + column_names[i] + \"\\\" \" + column_types[i] + \",\\n\"; } DDL = DDL.slice(0, -2) + \"\\n);\"; return DDL; $$;"
-					},
-					"ADFmappingFromSFDCMetaData": {
-						"type": "String",
-						"defaultValue": "(\"OBJECTNAME\" VARCHAR(16777216), \"EXCLUDE\" VARCHAR(16777216)) RETURNS VARCHAR(16777216) LANGUAGE JAVASCRIPT EXECUTE AS OWNER AS 'var current_database_result = snowflake.execute({sqlText: \"SELECT CURRENT_DATABASE()\"});current_database_result.next();var current_database_value = current_database_result.getColumnValue(1);var current_schema_result = snowflake.execute({sqlText: \"SELECT CURRENT_SCHEMA()\"});current_schema_result.next();var current_schema_value = current_schema_result.getColumnValue(1);var metadata_table = current_database_value + \".\" + current_schema_value + \".SFDC_METADATA_STAGE\";var sql = `SELECT OBJECTNAME, QUALIFIEDAPINAME, VALUETYPEID, LENGTH FROM ` + metadata_table + ` WHERE (UPPER(STATUS) != ''DISABLED'' OR STATUS IS NULL) AND OBJECTNAME = ''` + OBJECTNAME + `'' AND QUALIFIEDAPINAME NOT IN (''` + EXCLUDE.split('','').join(\"'',''\") + `'')`;var stmt = snowflake.createStatement({sqlText: sql});var resultSet = stmt.execute();var mappings = [];function valueTypeToDataType(valueType) {switch (valueType) {case \"id\": return \"String\";case \"string\": return \"String\";case \"boolean\": return \"Boolean\";case \"double\": return \"Decimal\";case \"integer\": return \"Integer\";case \"datetime\": return \"Date/Time\";case \"date\": return \"Date/Time\";case \"address\": return \"String\";default: return \"String\";}}while (resultSet.next()) {var qualifiedApiName = resultSet.getColumnValue(2);var valueType = resultSet.getColumnValue(3);var dataType = valueTypeToDataType(valueType);var mapping = {source: {name: qualifiedApiName, type: dataType},sink: {name: qualifiedApiName, type: dataType}};mappings.push(mapping);}var output = {type: \"TabularTranslator\", mappings: mappings};return JSON.stringify(output, null, 2);';"
-					},
-					"LOGTABLE": {
-						"type": "String",
-						"defaultValue": "(JOBDATE DATETIME, RESULT_TYPE VARCHAR(255), RESULT VARIANT,NODE VARCHAR(255));"
-					},
-					"CreateNewSchema": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "DataTools Pro 1 Click Data Lake V2.0.1"
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/SnowflakeKRS_UK')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/GenerateSFDCTable_v2')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -1077,8 +1063,7 @@
 									"userProperties": [],
 									"linkedServiceName": {
 										"referenceName": "SnowflakeKRS_UK",
-										"type": "LinkedServiceReference",
-										"parameters": {}
+										"type": "LinkedServiceReference"
 									},
 									"typeProperties": {
 										"scripts": [
@@ -1127,8 +1112,7 @@
 												"userProperties": [],
 												"linkedServiceName": {
 													"referenceName": "SnowflakeKRS_UK",
-													"type": "LinkedServiceReference",
-													"parameters": {}
+													"type": "LinkedServiceReference"
 												},
 												"typeProperties": {
 													"scripts": [
@@ -1164,8 +1148,7 @@
 												"userProperties": [],
 												"linkedServiceName": {
 													"referenceName": "SnowflakeKRS_UK",
-													"type": "LinkedServiceReference",
-													"parameters": {}
+													"type": "LinkedServiceReference"
 												},
 												"typeProperties": {
 													"scripts": [
@@ -1535,8 +1518,7 @@
 												"userProperties": [],
 												"linkedServiceName": {
 													"referenceName": "SnowflakeKRS_UK",
-													"type": "LinkedServiceReference",
-													"parameters": {}
+													"type": "LinkedServiceReference"
 												},
 												"typeProperties": {
 													"scripts": [
@@ -1878,7 +1860,7 @@
 												"additionalCopyOptions": {
 													"ON_ERROR": "ABORT_STATEMENT"
 												},
-												"storageIntegration": "DQ_CHECK_STORAGE_INT"
+												"storageIntegration": "AZURE_INT_STRMLN"
 											}
 										},
 										"enableStaging": true,
@@ -2296,8 +2278,7 @@
 						"userProperties": [],
 						"linkedServiceName": {
 							"referenceName": "SnowflakeKRS_UK",
-							"type": "LinkedServiceReference",
-							"parameters": {}
+							"type": "LinkedServiceReference"
 						},
 						"typeProperties": {
 							"scripts": [

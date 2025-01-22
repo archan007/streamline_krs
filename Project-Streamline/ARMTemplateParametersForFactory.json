@@ -5,14 +5,20 @@
 		"factoryName": {
 			"value": "Project-Streamline"
 		},
-		"SnowflakeKRS_UK_password": {
-			"value": ""
-		},
 		"SF_SNW_STRMLN_KRSUK_connectionString": {
 			"value": ""
 		},
 		"Salesforce_sandbox_clientSecret": {
 			"value": ""
+		},
+		"SnowflakeKRS_UK_password": {
+			"value": ""
+		},
+		"Salesforce_sandbox_properties_typeProperties_environmentUrl": {
+			"value": "https://keyrus--preprod.sandbox.my.salesforce.com"
+		},
+		"Salesforce_sandbox_properties_typeProperties_clientId": {
+			"value": "3MVG9f4Sg6xGHZYqZiMZ19iWWp9PQL_D6F2eqkog17h4u7Y5nx58Dap6uOXVPiqBFkB46W4bqX.WRLn1QZVT0"
 		},
 		"SnowflakeKRS_UK_properties_typeProperties_database": {
 			"value": "D_STRM_DB"
@@ -22,12 +28,6 @@
 		},
 		"SnowflakeKRS_UK_properties_typeProperties_host": {
 			"value": "keyruspartner.eu-west-1.snowflakecomputing.com"
-		},
-		"Salesforce_sandbox_properties_typeProperties_environmentUrl": {
-			"value": "https://keyrus--preprod.sandbox.my.salesforce.com"
-		},
-		"Salesforce_sandbox_properties_typeProperties_clientId": {
-			"value": "3MVG9f4Sg6xGHZYqZiMZ19iWWp9PQL_D6F2eqkog17h4u7Y5nx58Dap6uOXVPiqBFkB46W4bqX.WRLn1QZVT0"
 		}
 	}
 }
